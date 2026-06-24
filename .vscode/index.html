@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop Registration System</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    margin:0;
+    background:#f4f4f4;
+}
+
+.container{
+    display:grid;
+    grid-template-columns:1fr 2fr;
+    gap:20px;
+    padding:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+input,select,button{
+    width:100%;
+    padding:10px;
+    margin:8px 0;
+}
+
+button{
+    background:#007bff;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#0056b3;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+table th,table td{
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:center;
+}
+
+.dark{
+    background:#222;
+    color:white;
+}
+
+.dark .card{
+    background:#333;
+    color:white;
+}
+</style>
+</head>
+
+<body>
+
+<div style="padding:10px;text-align:right;">
+<button onclick="toggleDarkMode()">🌙 Dark Mode</button>
+</div>
+
+<div class="container">
+
+<!-- Registration Form -->
+<div class="card">
+<h2>Workshop Registration</h2>
+
+<form id="regForm">
+
+<input type="text" id="name" placeholder="Full Name" required>
+
+<input type="email" id="email" placeholder="Email" required>
+
+<input type="tel" id="phone" placeholder="Phone Number" required>
+
+<select id="workshop" required>
+<option value="">Select Workshop</option>
+<option>Web Development</option>
+<option>Artificial Intelligence</option>
+<option>Data Science</option>
+<option>Cloud Computing</option>
+</select>
+
+<button type="submit">Register</button>
+
+</form>
+
+<h3>Available Seats</h3>
+<p id="seatCount">50</p>
+
+<div id="confirmation"></div>
+
+</div>
+
+<!-- Admin Dashboard -->
+<div class="card">
+
+<h2>Admin Dashboard</h2>
+
+<input type="text" id="search" placeholder="Search Participant">
+
+<button onclick="exportCSV()">Export CSV</button>
+
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Workshop</th>
+<th>Attendance</th>
+<th>Certificate</th>
+</tr>
+</thead>
+
+<tbody id="tableBody">
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+let registrations =
+JSON.parse(localStorage.getItem("registrations")) || [];
+
+let seats = 50;
+
+document.getElementById("seatCount").innerText =
+seats - registrations.length;
+
+document.getElementById("regForm")
+.addEventListener("submit", function(e){
+
+e.preventDefault();
+
+let name = document.getElementById("name").value;
+let email = document.getElementById("email").value;
+let phone = document.getElementById("phone").value;
+let workshop = document.getElementById("workshop").value;
+
+let regId = "WRK" + Date.now();
+
+let participant = {
+id: regId,
+name,
+email,
+phone,
+workshop,
+attendance:false
+};
+
+registrations.push(participant);
+
+localStorage.setItem(
+"registrations",
+JSON.stringify(registrations)
+);
+
+document.getElementById("confirmation").innerHTML=
+`
+<h3 style="color:green">
+Registration Successful
+</h3>
+<p>ID: ${regId}</p>
+<p>${name}</p>
+<p>${workshop}</p>
+
+<img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${regId}">
+`;
+
+document.getElementById("regForm").reset();
+
+loadTable();
+
+});
+
+function loadTable(){
+
+let table = document.getElementById("tableBody");
+
+table.innerHTML="";
+
+registrations.forEach((p,index)=>{
+
+table.innerHTML += `
+<tr>
+
+<td>${p.id}</td>
+
+<td>${p.name}</td>
+
+<td>${p.workshop}</td>
+
+<td>
+<input
+type="checkbox"
+${p.attendance ? "checked" : ""}
+onchange="markAttendance(${index})">
+</td>
+
+<td>
+<button onclick="generateCertificate('${p.name}')">
+Certificate
+</button>
+</td>
+
+</tr>
+`;
+
+});
+
+document.getElementById("seatCount").innerText =
+50 - registrations.length;
+
+}
+
+function markAttendance(index){
+
+registrations[index].attendance =
+!registrations[index].attendance;
+
+localStorage.setItem(
+"registrations",
+JSON.stringify(registrations)
+);
+
+}
+
+function generateCertificate(name){
+
+let win = window.open();
+
+win.document.write(`
+<h1>Certificate of Participation</h1>
+<hr>
+<h2>${name}</h2>
+<p>Successfully completed the workshop.</p>
+`);
+
+}
+
+document.getElementById("search")
+.addEventListener("keyup", function(){
+
+let value =
+this.value.toLowerCase();
+
+let rows =
+document.querySelectorAll("#tableBody tr");
+
+rows.forEach(row=>{
+
+row.style.display =
+row.innerText.toLowerCase().includes(value)
+? ""
+: "none";
+
+});
+
+});
+
+function exportCSV(){
+
+let csv =
+"ID,Name,Email,Phone,Workshop\n";
+
+registrations.forEach(p=>{
+
+csv += `${p.id},${p.name},${p.email},${p.phone},${p.workshop}\n`;
+
+});
+
+let blob =
+new Blob([csv],{type:"text/csv"});
+
+let a =
+document.createElement("a");
+
+a.href =
+URL.createObjectURL(blob);
+
+a.download =
+"participants.csv";
+
+a.click();
+
+}
+
+function toggleDarkMode(){
+
+document.body.classList.toggle("dark");
+
+}
+
+loadTable();
+
+</script>
+
+</body>
+</html>
